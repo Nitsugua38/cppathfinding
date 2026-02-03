@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <queue>
+#include <filesystem>
 
 using namespace std;
 
@@ -280,14 +281,24 @@ float BENCHMARK::stopTimer() {
 
 // ---------------- MAIN -------------------------
 
-int main() {
+int main(int argc, char* argv[]) {
+
+    if (argv[1] && string(argv[1]) == "-full") {
+        cout << "full mode" << endl;
+    };
+
+    
 
     MAP workingMap;
     ALGOS algos;
 
-    
-    workingMap.initMap("../maps/map11.txt");
-    cout << "Imported map has " << workingMap.NUM_COLUMNS << " columns, " << workingMap.NUM_ROWS << " rows and " << workingMap.NUM_VERTICES << " vertices." << endl;
+
+    string mapChoice;
+    cout << "Pick a map: ";
+    cin >> mapChoice;
+
+    workingMap.initMap("../maps/map" + mapChoice + ".txt");
+    cout << "Map " << mapChoice << " has " << workingMap.NUM_COLUMNS << " columns, " << workingMap.NUM_ROWS << " rows and " << workingMap.NUM_VERTICES << " vertices." << endl;
 
 
     
