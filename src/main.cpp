@@ -117,12 +117,6 @@ void MAP::findStart() {
             };
         };
     };
-
-    for (int x = 0; x < NUM_COLUMNS; x++) {
-        for (int y = 0; y < NUM_ROWS; y++) {
-            visitedMatrix[y][x] = false;
-        };
-    };
     
 };
 
