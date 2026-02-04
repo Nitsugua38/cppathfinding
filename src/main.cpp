@@ -3,7 +3,6 @@
 #include <vector>
 #include <chrono>
 #include <queue>
-#include <filesystem>
 
 using namespace std;
 
@@ -45,6 +44,19 @@ class BENCHMARK {
         int pathLength(MAP m);
         void startTimer();
         float stopTimer();
+};
+
+
+class FLAGMANAGER {
+    private:
+        int argc;
+        char** argv;
+        int getFlag(string flag);
+    public:
+        string getMap();
+        void showVisited(MAP& m);
+
+        FLAGMANAGER(int ac, char* av[]) : argc(ac), argv(av) {};
 };
 
 
@@ -279,26 +291,64 @@ float BENCHMARK::stopTimer() {
 
 
 
+
+
+
+// ---------------- FLAG MANAGER -------------------------
+
+int FLAGMANAGER::getFlag(string flag) {
+    for (int i = 1; i < argc; i++) {
+        if (string(argv[i]) == flag) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+string FLAGMANAGER::getMap() {
+    int flagIndex = getFlag("-map");
+    if (flagIndex != -1) {
+        string chosenMap = string(argv[flagIndex + 1]);
+        return chosenMap;
+    };
+    return "../maps/map4.txt";
+};
+
+void FLAGMANAGER::showVisited(MAP& m) {
+    if (getFlag("--show-visited") == -1) {
+        for (int x = 0; x < m.NUM_COLUMNS; x++) {
+            for (int y = 0; y < m.NUM_ROWS; y++) {
+                if (m.mapMatrix[y][x] == 'v') {
+                    m.mapMatrix[y][x] = '_';
+                };
+            }
+        }
+    };
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ---------------- MAIN -------------------------
 
-int main(int argc, char* argv[]) {
-
-    if (argv[1] && string(argv[1]) == "-full") {
-        cout << "full mode" << endl;
-    };
-
-    
+int main(int argc, char* argv[]) {    
 
     MAP workingMap;
     ALGOS algos;
+    FLAGMANAGER flagManager(argc, argv);
 
 
-    string mapChoice;
-    cout << "Pick a map: ";
-    cin >> mapChoice;
-
-    workingMap.initMap("../maps/map" + mapChoice + ".txt");
-    cout << "Map " << mapChoice << " has " << workingMap.NUM_COLUMNS << " columns, " << workingMap.NUM_ROWS << " rows and " << workingMap.NUM_VERTICES << " vertices." << endl;
+    workingMap.initMap(flagManager.getMap());
+    cout << "Map " << "has " << workingMap.NUM_COLUMNS << " columns, " << workingMap.NUM_ROWS << " rows and " << workingMap.NUM_VERTICES << " vertices." << endl;
 
 
     
@@ -319,6 +369,7 @@ int main(int argc, char* argv[]) {
     algos.dfs(DFSworkingMap, DFSworkingMap.StartX, DFSworkingMap.StartY);
     float DFStime = DFSbenchmark.stopTimer();
     
+    flagManager.showVisited(DFSworkingMap);
     for (string i: DFSworkingMap.mapMatrix) {
         cout << i << endl;
     }
@@ -338,6 +389,7 @@ int main(int argc, char* argv[]) {
 
     cout << endl << "BFS Result:" << endl << endl;
 
+    flagManager.showVisited(BFSworkingMap);
     for (string i: BFSworkingMap.mapMatrix) {
         cout << i << endl;
     }
