@@ -19,7 +19,10 @@ class MAP {
         int StartY;
 
         vector<string> mapMatrix;
+        vector<vector<bool>> visitedMatrix;
+        
         void initMap(string mapPath);
+        void findStart();
 };
 
 
@@ -29,7 +32,6 @@ class ALGOS {
         int moveY[4] = {0, 0, 1, -1};
 
     public:
-        void findStart(MAP& m);
         bool dfs(MAP& m, int CurrentX, int CurrentY);
         void bfs(MAP& m, int CurrentX, int CurrentY);
 };
@@ -80,6 +82,7 @@ void MAP::initMap(string mapPath) {
 
     while (getline(readMap, fileLine)) {
         mapMatrix.push_back(fileLine);
+        visitedMatrix.push_back(vector<bool>(fileLine.size(), false));
     }
 
     NUM_COLUMNS = mapMatrix[0].size();
@@ -103,17 +106,23 @@ void MAP::initMap(string mapPath) {
 
 // ---------------- FIND MAP STARTING POINT -------------------------
 
-void ALGOS::findStart(MAP& m) {
+void MAP::findStart() {
     
-    for (int x = 0; x < m.NUM_COLUMNS; x++) {
-        for (int y = 0; y < m.NUM_ROWS; y++) {
-            if (m.mapMatrix[y][x] == 'S') {
-                m.StartX = x;
-                m.StartY = y;
+    for (int x = 0; x < NUM_COLUMNS; x++) {
+        for (int y = 0; y < NUM_ROWS; y++) {
+            if (mapMatrix[y][x] == 'S') {
+                StartX = x;
+                StartY = y;
                 return;
             };
-        }
-    }
+        };
+    };
+
+    for (int x = 0; x < NUM_COLUMNS; x++) {
+        for (int y = 0; y < NUM_ROWS; y++) {
+            visitedMatrix[y][x] = false;
+        };
+    };
     
 };
 
@@ -126,7 +135,7 @@ bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY) {
 
     // Step 1: if blocked/visited -> abandon
 
-    if (m.mapMatrix[CurrentY][CurrentX] == '#' || m.mapMatrix[CurrentY][CurrentX] == '*' || m.mapMatrix[CurrentY][CurrentX] == 'v' || m.mapMatrix[CurrentY][CurrentX] == '.') {
+    if (m.mapMatrix[CurrentY][CurrentX] == '#' || m.visitedMatrix[CurrentY][CurrentX] || m.mapMatrix[CurrentY][CurrentX] == '.') {
         return false;
     };
 
@@ -140,7 +149,7 @@ bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY) {
 
     // Step 3: mark as visited
 
-    if (m.mapMatrix[CurrentY][CurrentX] != 'S') m.mapMatrix[CurrentY][CurrentX] = 'v';
+    m.visitedMatrix[CurrentY][CurrentX] = true;
 
 
     // Step 4: explore neighbors
@@ -196,7 +205,7 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
             int newY = CurrentY + moveY[i];
 
 
-            if (m.mapMatrix[newY][newX] != '#' && m.mapMatrix[newY][newX] != '*' && m.mapMatrix[newY][newX] != 'v') {
+            if (m.mapMatrix[newY][newX] != '#' && !m.visitedMatrix[newY][newX]) {
 
                 parentX[newY][newX] = CurrentX;
                 parentY[newY][newX] = CurrentY;
@@ -230,7 +239,7 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
                 // Else, mark as visited and add neighbor to queue
                 
                 if (m.mapMatrix[newY][newX] != 'S' && m.mapMatrix[newY][newX] != 'E') {
-                    m.mapMatrix[newY][newX] = 'v';
+                    m.visitedMatrix[newY][newX] = true;
                     processQueue.push({newX, newY});
                 };
                 
@@ -315,11 +324,11 @@ string FLAGMANAGER::getMap() {
 };
 
 void FLAGMANAGER::showVisited(MAP& m) {
-    if (getFlag("--show-visited") == -1) {
+    if (getFlag("--show-visited") != -1) {
         for (int x = 0; x < m.NUM_COLUMNS; x++) {
             for (int y = 0; y < m.NUM_ROWS; y++) {
-                if (m.mapMatrix[y][x] == 'v') {
-                    m.mapMatrix[y][x] = '_';
+                if (m.visitedMatrix[y][x] && m.mapMatrix[y][x] != '.') {
+                    m.mapMatrix[y][x] = 'v';
                 };
             }
         }
@@ -352,7 +361,7 @@ int main(int argc, char* argv[]) {
 
 
     
-    algos.findStart(workingMap);
+    workingMap.findStart();
     cout << "Starting point is located at " << workingMap.StartX << "," << workingMap.StartY << endl << endl << "DFS Result:" << endl << endl;
 
 
