@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <queue>
+#include <limits>
 
 using namespace std;
 
@@ -20,6 +21,7 @@ class MAP {
 
         vector<string> mapMatrix;
         vector<vector<bool>> visitedMatrix;
+        vector<vector<double>> weightMatrix;
         
         void initMap(string mapPath);
         void findStart();
@@ -34,6 +36,7 @@ class ALGOS {
     public:
         bool dfs(MAP& m, int CurrentX, int CurrentY);
         void bfs(MAP& m, int CurrentX, int CurrentY);
+        void dijkstra(MAP& m, int CurrentX, int CurrentY);
 };
 
 
@@ -80,9 +83,12 @@ void MAP::initMap(string mapPath) {
     string fileLine;
 
 
+    double inf = numeric_limits<double>::infinity();
+
     while (getline(readMap, fileLine)) {
         mapMatrix.push_back(fileLine);
         visitedMatrix.push_back(vector<bool>(fileLine.size(), false));
+        weightMatrix.push_back(vector<double>(fileLine.size(), inf));
     }
 
     NUM_COLUMNS = mapMatrix[0].size();
@@ -251,6 +257,124 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
 
 
 
+// ---------------- DIJKSTRA -------------------------
+
+void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY) {
+
+
+    // Step 1: set start weight to 0 and init Priority Queue
+
+    m.weightMatrix[CurrentY][CurrentX] = 0;
+
+    priority_queue<
+        pair<double, pair<int, int>>,
+        vector<pair<double, pair<int, int>>>,
+        greater<pair<double, pair<int, int>>>
+    > priorityQueue;
+
+    priorityQueue.push({0.0, {CurrentX, CurrentY} });
+
+    bool endingFound = false;
+    int parentX[m.NUM_ROWS][m.NUM_COLUMNS];
+    int parentY[m.NUM_ROWS][m.NUM_COLUMNS];
+
+    parentX[CurrentY][CurrentX] = CurrentX;
+    parentY[CurrentY][CurrentX] = CurrentY;
+
+
+
+
+    // Step 2: Process the queue
+
+    while (!priorityQueue.empty() && !endingFound) {
+        
+        double CurrentWeight = priorityQueue.top().first;
+        CurrentX = priorityQueue.top().second.first;
+        CurrentY = priorityQueue.top().second.second;
+        priorityQueue.pop();
+
+
+        // Skip if better path already exists
+
+        if (CurrentWeight > m.weightMatrix[CurrentY][CurrentX]) {
+            continue;
+        };
+
+
+        // Ending found: Stop and rebuild final path from parents
+                
+        if (m.mapMatrix[CurrentY][CurrentX] == 'E') {
+            endingFound = true;
+
+            int recX = CurrentX;
+            int recY = CurrentY;
+
+            while (recX != m.StartX || recY != m.StartY) {
+                if (m.mapMatrix[recY][recX] != 'E') {
+                    m.mapMatrix[recY][recX] = '.';
+                };
+                int px = parentX[recY][recX];
+                int py = parentY[recY][recX];
+                recX = px;
+                recY = py;
+            };
+
+
+            return;
+        };
+
+
+        // Mark as visited for flag visualization
+
+        if (m.mapMatrix[CurrentY][CurrentX] != 'S') {
+            m.visitedMatrix[CurrentY][CurrentX] = true;
+        };
+
+
+
+        // For each neighbour
+
+        for (int i = 0; i < 4; i++) {
+                
+            int newX = CurrentX + moveX[i];
+            int newY = CurrentY + moveY[i];
+
+            if (m.mapMatrix[newY][newX] == '#') {
+                continue;
+            };
+
+            
+            // Get new path weight
+
+            double weight;
+            switch (m.mapMatrix[newY][newX]) {
+                case ' ': weight = 1.0; break;
+                case 'E': weight = 1.0; break;
+                case ':': weight = 2.0; break;
+                case ';': weight = 3.0; break;
+            };
+
+            double newWeight = CurrentWeight + weight;
+
+
+            // If path is better
+
+            if (newWeight < m.weightMatrix[newY][newX]) {
+                m.weightMatrix[newY][newX] = newWeight;
+                parentX[newY][newX] = CurrentX;
+                parentY[newY][newX] = CurrentY;
+                priorityQueue.push({newWeight, {newX, newY}});
+            };
+        };
+    };
+};
+
+
+
+
+
+
+
 
 
 // ---------------- BENCHMARK -------------------------
@@ -397,8 +521,29 @@ int main(int argc, char* argv[]) {
         cout << i << endl;
     }
 
+
+
+
+
+    // Execute Dijkstra
+
+    MAP DIJworkingMap = workingMap;
+    BENCHMARK DIJbenchmark;
+
+    DIJbenchmark.startTimer();
+    algos.dijkstra(DIJworkingMap, DIJworkingMap.StartX, DIJworkingMap.StartY);
+    float DIJtime = DIJbenchmark.stopTimer();
+
+    cout << endl << "Dijkstra Result:" << endl << endl;
+
+    flagManager.showVisited(DIJworkingMap);
+    for (string i: DIJworkingMap.mapMatrix) {
+        cout << i << endl;
+    }
+
     cout << endl << "Benchmark:" << endl << "DFS Path length is " << DFSbenchmark.pathLength(DFSworkingMap) << " and took " << DFStime << " ms to run." << endl
-        << "BFS Path length is " << BFSbenchmark.pathLength(BFSworkingMap) << " and took " << BFStime << " ms to run." << endl;
+        << "BFS Path length is " << BFSbenchmark.pathLength(BFSworkingMap) << " and took " << BFStime << " ms to run." << endl
+        << "Dijkstra Path length is " << DIJbenchmark.pathLength(DIJworkingMap) << " and took " << DIJtime << " ms to run." << endl;
 
 
     cout << endl;
