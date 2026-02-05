@@ -138,7 +138,7 @@ void MAP::findStartEnd() {
 
 
 
-// ---------------- FIND MAP USING EMOJIS -------------------------
+// ---------------- FILL MAP -------------------------
 
 void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT, sf::Text label, string labelTxt, bool visual) {
 
