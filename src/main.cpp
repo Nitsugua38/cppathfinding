@@ -4,6 +4,8 @@
 #include <chrono>
 #include <queue>
 #include <limits>
+#include <SFML/Graphics.hpp>
+#include <optional>
 
 using namespace std;
 
@@ -27,6 +29,7 @@ class MAP {
         
         void initMap(string mapPath);
         void findStartEnd();
+        void printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT);
 };
 
 
@@ -128,6 +131,36 @@ void MAP::findStartEnd() {
         };
     };
     
+};
+
+
+
+// ---------------- FIND MAP USING EMOJIS -------------------------
+
+void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT) {
+
+    float cellsize = min(WIDTH / NUM_COLUMNS, HEIGHT / NUM_ROWS);
+
+    sf::RectangleShape cellToPrint(sf::Vector2f(cellsize - 1.0f, cellsize - 1.0f));
+
+    for (int y = 0; y < NUM_ROWS; y++) {
+        for (int x = 0; x < NUM_COLUMNS; x++) {
+            switch (mapMatrix[y][x]) {
+                case '#': cellToPrint.setFillColor(sf::Color(50, 50, 50)); break;
+                case 'S': cellToPrint.setFillColor(sf::Color::Green); break;
+                case 'E': cellToPrint.setFillColor(sf::Color::Red); break;
+                case ':': cellToPrint.setFillColor(sf::Color(170, 170, 170)); break;
+                case ';': cellToPrint.setFillColor(sf::Color(120, 120, 120)); break;
+                case 'v': cellToPrint.setFillColor(sf::Color(255, 255, 0)); break;
+                case '.': cellToPrint.setFillColor(sf::Color(10, 75, 255)); break;
+                default: cellToPrint.setFillColor(sf::Color(255, 255, 255)); break;
+            };
+
+            cellToPrint.setPosition(offsetX + (x * cellsize), offsetY + (y * cellsize));
+            window.draw(cellToPrint);
+        };
+        cout << endl;
+    };
 };
 
 
@@ -595,7 +628,7 @@ string FLAGMANAGER::getMap() {
         string chosenMap = string(argv[flagIndex + 1]);
         return chosenMap;
     };
-    return "../maps/map4.txt";
+    throw runtime_error("You need to provide a map using -map argument!");
 };
 
 void FLAGMANAGER::showVisited(MAP& m) {
@@ -624,7 +657,14 @@ void FLAGMANAGER::showVisited(MAP& m) {
 
 // ---------------- MAIN -------------------------
 
-int main(int argc, char* argv[]) {    
+int main(int argc, char* argv[]) {
+
+    sf::Font font;
+    if (!font.loadFromFile("ARIAL.TTF")) {
+        throw runtime_error("You need to provide ARIAL.TTF!");
+    };
+
+    
 
     MAP workingMap;
     ALGOS algos;
@@ -632,13 +672,7 @@ int main(int argc, char* argv[]) {
 
 
     workingMap.initMap(flagManager.getMap());
-    cout << "Map " << "has " << workingMap.NUM_COLUMNS << " columns, " << workingMap.NUM_ROWS << " rows and " << workingMap.NUM_VERTICES << " vertices." << endl;
-
-
-    
     workingMap.findStartEnd();
-    cout << "Starting point is located at " << workingMap.StartX << "," << workingMap.StartY << endl << endl << "DFS Result:" << endl << endl;
-
 
 
 
@@ -654,10 +688,6 @@ int main(int argc, char* argv[]) {
     float DFStime = DFSbenchmark.stopTimer();
     
     flagManager.showVisited(DFSworkingMap);
-    for (string i: DFSworkingMap.mapMatrix) {
-        cout << i << endl;
-    }
-
 
 
 
@@ -671,12 +701,7 @@ int main(int argc, char* argv[]) {
     algos.bfs(BFSworkingMap, BFSworkingMap.StartX, BFSworkingMap.StartY);
     float BFStime = BFSbenchmark.stopTimer();
 
-    cout << endl << "BFS Result:" << endl << endl;
-
     flagManager.showVisited(BFSworkingMap);
-    for (string i: BFSworkingMap.mapMatrix) {
-        cout << i << endl;
-    }
 
 
 
@@ -691,12 +716,7 @@ int main(int argc, char* argv[]) {
     algos.dijkstra(DIJworkingMap, DIJworkingMap.StartX, DIJworkingMap.StartY);
     float DIJtime = DIJbenchmark.stopTimer();
 
-    cout << endl << "Dijkstra Result:" << endl << endl;
-
     flagManager.showVisited(DIJworkingMap);
-    for (string i: DIJworkingMap.mapMatrix) {
-        cout << i << endl;
-    };
 
 
 
@@ -710,12 +730,43 @@ int main(int argc, char* argv[]) {
     algos.astar(AworkingMap, AworkingMap.StartX, AworkingMap.StartY);
     float Atime = Abenchmark.stopTimer();
 
-    cout << endl << "A* Result:" << endl << endl;
-
     flagManager.showVisited(AworkingMap);
-    for (string i: AworkingMap.mapMatrix) {
-        cout << i << endl;
-    }
+
+    
+
+
+    // Graphical
+
+    sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+    sf::RenderWindow window(sf::VideoMode(desktop.width, desktop.height), "Test !");
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) window.close();
+        };
+
+        window.clear(sf::Color::Black);
+
+
+        sf::Vector2u windowSize = window.getSize();
+        float halfW = windowSize.x / 2.0f - 50;
+        float halfH = windowSize.y / 2.0f - 50;
+
+
+        DFSworkingMap.printMap(window, 0, 0, halfW, halfH);
+        BFSworkingMap.printMap(window, halfW + 100, 0, halfW, halfH);
+        DIJworkingMap.printMap(window, 0, halfH, halfW, halfH);
+        AworkingMap.printMap(window, halfW + 100, halfH, halfW, halfH);
+
+
+        window.display();
+    };
+
+
+
+    // Show text
+
+    
 
     cout << endl << "Benchmark:" << endl << endl << "DFS Path length is " << DFSbenchmark.pathLength(DFSworkingMap) << " and took " << DFStime << " ms to run." << endl
         << "BFS Path length is " << BFSbenchmark.pathLength(BFSworkingMap) << " and took " << BFStime << " ms to run." << endl
