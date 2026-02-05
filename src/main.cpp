@@ -2,10 +2,10 @@
 #include <fstream>
 #include <vector>
 #include <chrono>
+#include <thread>
 #include <queue>
 #include <limits>
 #include <SFML/Graphics.hpp>
-#include <optional>
 
 using namespace std;
 
@@ -29,7 +29,7 @@ class MAP {
         
         void initMap(string mapPath);
         void findStartEnd();
-        void printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT);
+        void printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT, sf::Text label, string labelTxt, bool visual);
 };
 
 
@@ -39,11 +39,13 @@ class ALGOS {
         int moveY[4] = {0, 0, 1, -1};
 
     public:
-        bool dfs(MAP& m, int CurrentX, int CurrentY);
-        void bfs(MAP& m, int CurrentX, int CurrentY);
-        void dijkstra(MAP& m, int CurrentX, int CurrentY);
-        void astar(MAP& m, int CurrentX, int CurrentY);
+        bool dfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label);
+        void bfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label);
+        void dijkstra(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label);
+        void astar(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label);
         double manhattanHeuristic(int x1, int x2, int y1, int y2);
+
+        int waitTimer = 50;
 };
 
 
@@ -67,6 +69,7 @@ class FLAGMANAGER {
     public:
         string getMap();
         void showVisited(MAP& m);
+        bool isVisualizer(ALGOS& algos);
 
         FLAGMANAGER(int ac, char* av[]) : argc(ac), argv(av) {};
 };
@@ -137,9 +140,9 @@ void MAP::findStartEnd() {
 
 // ---------------- FIND MAP USING EMOJIS -------------------------
 
-void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT) {
+void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float WIDTH, float HEIGHT, sf::Text label, string labelTxt, bool visual) {
 
-    float cellsize = min(WIDTH / NUM_COLUMNS, HEIGHT / NUM_ROWS);
+    float cellsize = min(WIDTH / NUM_COLUMNS, HEIGHT / NUM_ROWS) - 1;
 
     sf::RectangleShape cellToPrint(sf::Vector2f(cellsize - 1.0f, cellsize - 1.0f));
 
@@ -156,11 +159,22 @@ void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float
                 default: cellToPrint.setFillColor(sf::Color(255, 255, 255)); break;
             };
 
+            if (visual && visitedMatrix[y][x] && mapMatrix[y][x] != '.') cellToPrint.setFillColor(sf::Color(255, 255, 0));
+
             cellToPrint.setPosition(offsetX + (x * cellsize), offsetY + (y * cellsize));
             window.draw(cellToPrint);
         };
         cout << endl;
     };
+
+    label.setString(labelTxt);
+    if (labelTxt == "Depth-First Search") label.setPosition(0, 0);
+    if (labelTxt == "Breadth-First Search") label.setPosition(WIDTH + 100, 0);
+    if (labelTxt == "Dijkstra") label.setPosition(0, HEIGHT + 5);
+    if (labelTxt == "A*") label.setPosition(WIDTH + 100, HEIGHT + 5);
+
+    window.draw(label);
+
 };
 
 
@@ -176,7 +190,7 @@ void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float
 
 // ---------------- DEPTH-FIRST SEARCH -------------------------
 
-bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY) {
+bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label) {
 
     // Step 1: if blocked/visited -> abandon
 
@@ -197,10 +211,32 @@ bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY) {
     m.visitedMatrix[CurrentY][CurrentX] = true;
 
 
+    
+    // Visualizer
+
+    if (visual) {
+        chrono::milliseconds waitTime(waitTimer);
+        this_thread::sleep_for(waitTime);
+
+        m.printMap(window, 0, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Depth-First Search", visual);
+        window.display();
+        sf::Event event;
+        while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+    };
+
+
+
     // Step 4: explore neighbors
 
-    if (dfs(m, CurrentX + 1, CurrentY) || dfs(m, CurrentX - 1, CurrentY) || dfs(m, CurrentX, CurrentY + 1) || dfs(m, CurrentX, CurrentY - 1)) {
+    if (dfs(m, CurrentX + 1, CurrentY, window, visual, label) || dfs(m, CurrentX - 1, CurrentY, window, visual, label) || dfs(m, CurrentX, CurrentY + 1, window, visual, label) || dfs(m, CurrentX, CurrentY - 1, window, visual, label)) {
         if (m.mapMatrix[CurrentY][CurrentX] != 'S') m.mapMatrix[CurrentY][CurrentX] = '.';
+        
+        if (visual) {
+            m.printMap(window, 0, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Depth-First Search", visual);
+            window.display();
+            sf::Event event;
+            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+        };
         return true;
     }
 
@@ -217,7 +253,7 @@ bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY) {
 
 // ---------------- BREADTH-FIRST SEARCH -------------------------
 
-void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
+void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label) {
 
 
     // Step 1: Create a queue and init parent
@@ -241,6 +277,19 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
         CurrentX = processQueue.front().first;
         CurrentY = processQueue.front().second;
         processQueue.pop();
+
+
+        // Visualizer
+
+        if (visual) {
+            chrono::milliseconds waitTime(waitTimer);
+            this_thread::sleep_for(waitTime);
+
+            m.printMap(window, window.getSize().x / 2.0f - 50 + 100, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Breadth-First Search", visual);
+            window.display();
+            sf::Event event;
+            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+        };
 
 
         // For each neighbour
@@ -276,6 +325,13 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
                     };
 
 
+                    if (visual) {
+                        m.printMap(window, window.getSize().x / 2.0f - 50 + 100, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Breadth-First Search", visual);
+                        window.display();
+                        sf::Event event;
+                        while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+                    }
+
                     return;
                 }
 
@@ -304,7 +360,7 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY) {
 
 // ---------------- DIJKSTRA -------------------------
 
-void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY) {
+void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label) {
 
 
     // Step 1: set start weight to 0 and init Priority Queue
@@ -346,6 +402,22 @@ void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY) {
         };
 
 
+
+        // Visualizer
+
+        if (visual) {
+            chrono::milliseconds waitTime(waitTimer);
+            this_thread::sleep_for(waitTime);
+
+            m.printMap(window, 0, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Dijkstra", visual);
+            window.display();
+            sf::Event event;
+            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+        };
+
+
+
+
         // Ending found: Stop and rebuild final path from parents
                 
         if (m.mapMatrix[CurrentY][CurrentX] == 'E') {
@@ -363,6 +435,13 @@ void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY) {
                 recX = px;
                 recY = py;
             };
+
+            if (visual) {
+                m.printMap(window, 0, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Dijkstra", visual);
+                window.display();
+                sf::Event event;
+                while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+            }
 
 
             return;
@@ -424,7 +503,7 @@ void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY) {
 
 // ---------------- A* -------------------------
 
-void ALGOS::astar(MAP& m, int CurrentX, int CurrentY) {
+void ALGOS::astar(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bool visual, sf::Text label) {
 
 
     // Step 1: set start weight to 0 and init Priority Queue
@@ -471,6 +550,22 @@ void ALGOS::astar(MAP& m, int CurrentX, int CurrentY) {
         };
 
 
+        
+        // Visualizer
+
+        if (visual) {
+            chrono::milliseconds waitTime(waitTimer);
+            this_thread::sleep_for(waitTime);
+
+            m.printMap(window, window.getSize().x / 2.0f - 50 + 100, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "A*", visual);
+            window.display();
+            sf::Event event;
+            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+        };
+
+
+
+
         // Ending found: Stop and rebuild final path from parents
                 
         if (m.mapMatrix[CurrentY][CurrentX] == 'E') {
@@ -488,6 +583,14 @@ void ALGOS::astar(MAP& m, int CurrentX, int CurrentY) {
                 recX = px;
                 recY = py;
             };
+
+
+            if (visual) {
+                m.printMap(window, window.getSize().x / 2.0f - 50 + 100, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "A*", visual);
+                window.display();
+                sf::Event event;
+                while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+            }
 
 
             return;
@@ -623,12 +726,12 @@ int FLAGMANAGER::getFlag(string flag) {
 };
 
 string FLAGMANAGER::getMap() {
-    int flagIndex = getFlag("-map");
+    int flagIndex = getFlag("-m");
     if (flagIndex != -1) {
         string chosenMap = string(argv[flagIndex + 1]);
         return chosenMap;
     };
-    throw runtime_error("You need to provide a map using -map argument!");
+    throw runtime_error("You need to provide a map using -m argument!");
 };
 
 void FLAGMANAGER::showVisited(MAP& m) {
@@ -642,6 +745,23 @@ void FLAGMANAGER::showVisited(MAP& m) {
         }
     };
 };
+
+
+bool FLAGMANAGER::isVisualizer(ALGOS& algos) {
+    int flagIndex = getFlag("--visualize");
+    if (flagIndex != -1) {
+        if (argv[flagIndex + 1]) {
+            string chosenTimer = string(argv[flagIndex + 1]);
+            int chosenTimerInt = stoi(chosenTimer);
+            if (chosenTimerInt && chosenTimerInt > 0) {
+                algos.waitTimer = chosenTimerInt;
+            };
+        };
+        return true;
+    };
+    return false;
+};
+
 
 
 
@@ -660,11 +780,17 @@ void FLAGMANAGER::showVisited(MAP& m) {
 int main(int argc, char* argv[]) {
 
     sf::Font font;
-    if (!font.loadFromFile("ARIAL.TTF")) {
-        throw runtime_error("You need to provide ARIAL.TTF!");
+    if (!font.loadFromFile("arial.ttf")) {
+        throw runtime_error("No font found! You need to provide the 'arial.ttf' file alongside this executable!");
     };
 
-    
+    sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+    sf::RenderWindow window(sf::VideoMode(desktop.width, desktop.height), "CPPathfinder");
+    sf::Text label;
+    label.setFont(font);
+    label.setCharacterSize(16);
+    label.setFillColor(sf::Color::White);
+
 
     MAP workingMap;
     ALGOS algos;
@@ -675,16 +801,25 @@ int main(int argc, char* argv[]) {
     workingMap.findStartEnd();
 
 
+    
+    MAP DFSworkingMap = workingMap;
+    MAP BFSworkingMap = workingMap;
+    MAP DIJworkingMap = workingMap;
+    MAP AworkingMap = workingMap;
+
+
+    BENCHMARK DFSbenchmark, BFSbenchmark, DIJbenchmark, Abenchmark;
+
+
+    bool visual = flagManager.isVisualizer(algos);
+
+
 
 
 
     // Execute DFS
-
-    MAP DFSworkingMap = workingMap;
-    BENCHMARK DFSbenchmark;
-
     DFSbenchmark.startTimer();
-    algos.dfs(DFSworkingMap, DFSworkingMap.StartX, DFSworkingMap.StartY);
+    algos.dfs(DFSworkingMap, DFSworkingMap.StartX, DFSworkingMap.StartY, window, visual, label);
     float DFStime = DFSbenchmark.stopTimer();
     
     flagManager.showVisited(DFSworkingMap);
@@ -693,12 +828,8 @@ int main(int argc, char* argv[]) {
 
 
     // Execute BFS
-
-    MAP BFSworkingMap = workingMap;
-    BENCHMARK BFSbenchmark;
-
     BFSbenchmark.startTimer();
-    algos.bfs(BFSworkingMap, BFSworkingMap.StartX, BFSworkingMap.StartY);
+    algos.bfs(BFSworkingMap, BFSworkingMap.StartX, BFSworkingMap.StartY, window, visual, label);
     float BFStime = BFSbenchmark.stopTimer();
 
     flagManager.showVisited(BFSworkingMap);
@@ -706,14 +837,9 @@ int main(int argc, char* argv[]) {
 
 
 
-
     // Execute Dijkstra
-
-    MAP DIJworkingMap = workingMap;
-    BENCHMARK DIJbenchmark;
-
     DIJbenchmark.startTimer();
-    algos.dijkstra(DIJworkingMap, DIJworkingMap.StartX, DIJworkingMap.StartY);
+    algos.dijkstra(DIJworkingMap, DIJworkingMap.StartX, DIJworkingMap.StartY, window, visual, label);
     float DIJtime = DIJbenchmark.stopTimer();
 
     flagManager.showVisited(DIJworkingMap);
@@ -722,12 +848,8 @@ int main(int argc, char* argv[]) {
 
 
     // Execute A*
-
-    MAP AworkingMap = workingMap;
-    BENCHMARK Abenchmark;
-
     Abenchmark.startTimer();
-    algos.astar(AworkingMap, AworkingMap.StartX, AworkingMap.StartY);
+    algos.astar(AworkingMap, AworkingMap.StartX, AworkingMap.StartY, window, visual, label);
     float Atime = Abenchmark.stopTimer();
 
     flagManager.showVisited(AworkingMap);
@@ -735,10 +857,11 @@ int main(int argc, char* argv[]) {
     
 
 
+
+
     // Graphical
 
-    sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-    sf::RenderWindow window(sf::VideoMode(desktop.width, desktop.height), "Test !");
+    
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -753,10 +876,31 @@ int main(int argc, char* argv[]) {
         float halfH = windowSize.y / 2.0f - 50;
 
 
-        DFSworkingMap.printMap(window, 0, 0, halfW, halfH);
-        BFSworkingMap.printMap(window, halfW + 100, 0, halfW, halfH);
-        DIJworkingMap.printMap(window, 0, halfH, halfW, halfH);
-        AworkingMap.printMap(window, halfW + 100, halfH, halfW, halfH);
+        DFSworkingMap.printMap(window, 0, 20, halfW, halfH, label, "Depth-First Search", visual);
+        BFSworkingMap.printMap(window, halfW + 100, 20, halfW, halfH, label, "Breadth-First Search", visual);
+        DIJworkingMap.printMap(window, 0, halfH + 30, halfW, halfH, label, "Dijkstra", visual);
+        AworkingMap.printMap(window, halfW + 100, halfH + 30, halfW, halfH, label, "A*", visual);
+
+
+        // Show benchmark text
+
+        sf::Text benchmarkTxt;
+        benchmarkTxt.setFont(font);
+        benchmarkTxt.setCharacterSize(14);
+        benchmarkTxt.setFillColor(sf::Color::White);
+        benchmarkTxt.setLineSpacing(1.3);
+
+        string benchmarkStr = 
+            "DFS Path length is " + to_string(DFSbenchmark.pathLength(DFSworkingMap)) + " and took " + to_string(DFStime) + " ms to run.\n"
+            "BFS Path length is " + to_string(BFSbenchmark.pathLength(BFSworkingMap)) + " and took " + to_string(BFStime) + " ms to run.\n"
+            "Dijkstra Path length is " + to_string(DIJbenchmark.pathLength(DIJworkingMap)) + " and took " + to_string(DIJtime) + " ms to run.\n"
+            "A* Path length is " + to_string(Abenchmark.pathLength(AworkingMap)) + " and took " + to_string(Atime) + " ms to run.\n";
+
+        if (visual) benchmarkStr = "Benchmark is not available in visualizer mode.";
+
+        benchmarkTxt.setString(benchmarkStr);
+        benchmarkTxt.setPosition(20, window.getSize().y - 90);
+        window.draw(benchmarkTxt);
 
 
         window.display();
@@ -764,16 +908,6 @@ int main(int argc, char* argv[]) {
 
 
 
-    // Show text
 
-    
-
-    cout << endl << "Benchmark:" << endl << endl << "DFS Path length is " << DFSbenchmark.pathLength(DFSworkingMap) << " and took " << DFStime << " ms to run." << endl
-        << "BFS Path length is " << BFSbenchmark.pathLength(BFSworkingMap) << " and took " << BFStime << " ms to run." << endl
-        << "Dijkstra Path length is " << DIJbenchmark.pathLength(DIJworkingMap) << " and took " << DIJtime << " ms to run." << endl
-        << "A* Path length is " << Abenchmark.pathLength(AworkingMap) << " and took " << Atime << " ms to run." << endl;
-
-
-    cout << endl;
     return 0;
 }
