@@ -18,13 +18,15 @@ class MAP {
 
         int StartX;
         int StartY;
+        int EndX;
+        int EndY;
 
         vector<string> mapMatrix;
         vector<vector<bool>> visitedMatrix;
         vector<vector<double>> weightMatrix;
         
         void initMap(string mapPath);
-        void findStart();
+        void findStartEnd();
 };
 
 
@@ -37,6 +39,8 @@ class ALGOS {
         bool dfs(MAP& m, int CurrentX, int CurrentY);
         void bfs(MAP& m, int CurrentX, int CurrentY);
         void dijkstra(MAP& m, int CurrentX, int CurrentY);
+        void astar(MAP& m, int CurrentX, int CurrentY);
+        double manhattanHeuristic(int x1, int x2, int y1, int y2);
 };
 
 
@@ -107,24 +111,32 @@ void MAP::initMap(string mapPath) {
 
 
 
+// ---------------- FIND MAP STARTING/ENDING POINT -------------------------
 
-
-
-// ---------------- FIND MAP STARTING POINT -------------------------
-
-void MAP::findStart() {
+void MAP::findStartEnd() {
     
     for (int x = 0; x < NUM_COLUMNS; x++) {
         for (int y = 0; y < NUM_ROWS; y++) {
             if (mapMatrix[y][x] == 'S') {
                 StartX = x;
                 StartY = y;
-                return;
+            };
+            if (mapMatrix[y][x] == 'E') {
+                EndX = x;
+                EndY = y;
             };
         };
     };
     
 };
+
+
+
+
+
+
+
+
 
 
 
@@ -377,6 +389,151 @@ void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY) {
 
 
 
+// ---------------- A* -------------------------
+
+void ALGOS::astar(MAP& m, int CurrentX, int CurrentY) {
+
+
+    // Step 1: set start weight to 0 and init Priority Queue
+
+    m.weightMatrix[CurrentY][CurrentX] = 0;
+
+    priority_queue<
+        pair<double, pair<int, int>>,
+        vector<pair<double, pair<int, int>>>,
+        greater<pair<double, pair<int, int>>>
+    > priorityQueue;
+
+
+    // Queue is now sorted by Manhattan Distance Heuristic + terrain weight
+    
+    double initialMH = manhattanHeuristic(m.EndX, CurrentX, m.EndY, CurrentY);
+    priorityQueue.push({initialMH, {CurrentX, CurrentY} });
+
+
+    bool endingFound = false;
+    int parentX[m.NUM_ROWS][m.NUM_COLUMNS];
+    int parentY[m.NUM_ROWS][m.NUM_COLUMNS];
+
+    parentX[CurrentY][CurrentX] = CurrentX;
+    parentY[CurrentY][CurrentX] = CurrentY;
+
+
+
+
+    // Step 2: Process the queue
+
+    while (!priorityQueue.empty() && !endingFound) {
+        
+        CurrentX = priorityQueue.top().second.first;
+        CurrentY = priorityQueue.top().second.second;
+        double CurrentWeight = m.weightMatrix[CurrentY][CurrentX];
+        priorityQueue.pop();
+
+
+        // Skip if better path already exists
+
+        if (CurrentWeight > m.weightMatrix[CurrentY][CurrentX]) {
+            continue;
+        };
+
+
+        // Ending found: Stop and rebuild final path from parents
+                
+        if (m.mapMatrix[CurrentY][CurrentX] == 'E') {
+            endingFound = true;
+
+            int recX = CurrentX;
+            int recY = CurrentY;
+
+            while (recX != m.StartX || recY != m.StartY) {
+                if (m.mapMatrix[recY][recX] != 'E') {
+                    m.mapMatrix[recY][recX] = '.';
+                };
+                int px = parentX[recY][recX];
+                int py = parentY[recY][recX];
+                recX = px;
+                recY = py;
+            };
+
+
+            return;
+        };
+
+
+        // Mark as visited for flag visualization
+
+        if (m.mapMatrix[CurrentY][CurrentX] != 'S') {
+            m.visitedMatrix[CurrentY][CurrentX] = true;
+        };
+
+
+
+        // For each neighbour
+
+        for (int i = 0; i < 4; i++) {
+                
+            int newX = CurrentX + moveX[i];
+            int newY = CurrentY + moveY[i];
+
+            if (m.mapMatrix[newY][newX] == '#') {
+                continue;
+            };
+
+            
+            // Get new path weight
+
+            double weight;
+            switch (m.mapMatrix[newY][newX]) {
+                case ' ': weight = 1.0; break;
+                case 'E': weight = 1.0; break;
+                case ':': weight = 2.0; break;
+                case ';': weight = 3.0; break;
+            };
+
+            double newWeight = CurrentWeight + weight;
+
+
+            // If path is better
+
+            if (newWeight < m.weightMatrix[newY][newX]) {
+                m.weightMatrix[newY][newX] = newWeight;
+                parentX[newY][newX] = CurrentX;
+                parentY[newY][newX] = CurrentY;
+
+
+                // Manhattan Distance Heuristic + terrain weight for queue prioritization 
+
+                double newMH = manhattanHeuristic(m.EndX, newX, m.EndY, newY);
+                priorityQueue.push({(newWeight + newMH), {newX, newY}});
+            };
+        };
+    };
+};
+
+
+
+
+
+
+
+
+
+double ALGOS::manhattanHeuristic(int x1, int x2, int y1, int y2) {
+    return abs(x1 - x2) + abs(y1 - y2);
+};
+
+
+
+
+
+
+
+
+
+
+
+
 // ---------------- BENCHMARK -------------------------
 
 int BENCHMARK::pathLength(MAP m) {
@@ -479,7 +636,7 @@ int main(int argc, char* argv[]) {
 
 
     
-    workingMap.findStart();
+    workingMap.findStartEnd();
     cout << "Starting point is located at " << workingMap.StartX << "," << workingMap.StartY << endl << endl << "DFS Result:" << endl << endl;
 
 
@@ -539,11 +696,31 @@ int main(int argc, char* argv[]) {
     flagManager.showVisited(DIJworkingMap);
     for (string i: DIJworkingMap.mapMatrix) {
         cout << i << endl;
+    };
+
+
+
+
+    // Execute A*
+
+    MAP AworkingMap = workingMap;
+    BENCHMARK Abenchmark;
+
+    Abenchmark.startTimer();
+    algos.astar(AworkingMap, AworkingMap.StartX, AworkingMap.StartY);
+    float Atime = Abenchmark.stopTimer();
+
+    cout << endl << "A* Result:" << endl << endl;
+
+    flagManager.showVisited(AworkingMap);
+    for (string i: AworkingMap.mapMatrix) {
+        cout << i << endl;
     }
 
-    cout << endl << "Benchmark:" << endl << "DFS Path length is " << DFSbenchmark.pathLength(DFSworkingMap) << " and took " << DFStime << " ms to run." << endl
+    cout << endl << "Benchmark:" << endl << endl << "DFS Path length is " << DFSbenchmark.pathLength(DFSworkingMap) << " and took " << DFStime << " ms to run." << endl
         << "BFS Path length is " << BFSbenchmark.pathLength(BFSworkingMap) << " and took " << BFStime << " ms to run." << endl
-        << "Dijkstra Path length is " << DIJbenchmark.pathLength(DIJworkingMap) << " and took " << DIJtime << " ms to run." << endl;
+        << "Dijkstra Path length is " << DIJbenchmark.pathLength(DIJworkingMap) << " and took " << DIJtime << " ms to run." << endl
+        << "A* Path length is " << Abenchmark.pathLength(AworkingMap) << " and took " << Atime << " ms to run." << endl;
 
 
     cout << endl;
