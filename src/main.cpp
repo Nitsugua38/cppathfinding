@@ -729,6 +729,9 @@ string FLAGMANAGER::getMap() {
     int flagIndex = getFlag("-m");
     if (flagIndex != -1) {
         string chosenMap = string(argv[flagIndex + 1]);
+        if (chosenMap.find(".txt") == string::npos) {
+            chosenMap =  "/opt/cppathfinder/maps/" + chosenMap + ".txt";
+        };
         return chosenMap;
     };
     throw runtime_error("You need to provide a map using -m argument!");

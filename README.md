@@ -18,6 +18,8 @@ The program takes 2D ASCII maps as input. Sample maps are provided in [./maps/](
 
 The output is rendered into a window with tiles to represent the maps more nicely. Grey tiles are walls, Green/Red is Start/End and Blue show the final path. Yellow tiles represent the routes the algorithm has explored while it was searching for the path.
 
+Maps 1, 2, 4, 8, 9, 10 and 11 have weighted versions respectively called `map1w`, `map2w`, etc.
+
 
 #### Algos
 
@@ -29,7 +31,7 @@ The output is rendered into a window with tiles to represent the maps more nicel
 
 #### Installation
 
-Download the compressed folder from the [Releases](https://github.com/Nitsugua38/cppathfinding/releases) tab. You need all the included files in order to be able to run the program.
+**Download and install the package file from the [Releases](https://github.com/Nitsugua38/cppathfinding/releases) tab.**
 
 Alternatively, you can also download the source code and compile it yourself using
 
@@ -42,7 +44,11 @@ You will need to have SFML installed.
 
 You need to provide the map to the program when running it using the `-m` option:
 
-`./cppathfinder -m path/to/your/map.txt`
+`cppathfinder -m path/to/your/map.txt`
+
+You can use the sample maps that are included with the package using `mapX` instead of a path where X is the map number (1-11). Example:
+
+`cppathfinder -m map5`
 
 Three modes are available:
 - Default (no extra flag)
@@ -51,13 +57,13 @@ Three modes are available:
 
 ##### Visited Mode
 
-`./cppathfinder -m path/to/your/map.txt --show-visited`
+`cppathfinder -m path/to/your/map.txt --show-visited`
 
 This will display all the routes that the algorithm has explored while it was searching for the path.
 
 ##### Visualize Mode
 
-`./cppathfinder -m path/to/your/map.txt --visualize 50`
+`cppathfinder -m path/to/your/map.txt --visualize 50`
 
 This will run the algorithm step by step, showing all the routes being explored, to demonstrate how the algo is behaving. You can set the step delay (in ms) by passing the argument (default is 50).
 
