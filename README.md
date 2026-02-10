@@ -31,12 +31,10 @@ Maps 1, 2, 4, 8, 9, 10 and 11 have weighted versions respectively called `map1w`
 
 #### Installation
 
-**Download and install the package file from the [Releases](https://github.com/Nitsugua38/cppathfinding/releases) tab.**
+**Add the nitsu.xyz PPA using:** `sudo add-apt-repository ppa:nitsuxyz/ppa`
+**Install the package using:** `sudo apt install cppathfinder`
 
-Alternatively, you can also download the source code and compile it yourself using
-
-`g++ src/main.cpp -I./include -lsfml-graphics -lsfml-window -lsfml-system -o ./build/cppathfinder`
-
+Alternatively, you can also download the source code and compile it yourself using `make`.
 You will need to have SFML installed.
 
 
@@ -66,9 +64,3 @@ This will display all the routes that the algorithm has explored while it was se
 `cppathfinder -m path/to/your/map.txt --visualize 50`
 
 This will run the algorithm step by step, showing all the routes being explored, to demonstrate how the algo is behaving. You can set the step delay (in ms) by passing the argument (default is 50).
-
-<br>
-
-⚠️ **Warning** ⚠️
-
-You always need to include the `arial.ttf` file alongside the executable or the program will not be able to run. This is because the graphics library used relies on external fonts that cannot be embedded into the program.

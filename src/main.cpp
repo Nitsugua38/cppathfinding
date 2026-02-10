@@ -70,6 +70,7 @@ class FLAGMANAGER {
         string getMap();
         void showVisited(MAP& m);
         bool isVisualizer(ALGOS& algos);
+        void getHelp();
 
         FLAGMANAGER(int ac, char* av[]) : argc(ac), argv(av) {};
 };
@@ -728,10 +729,15 @@ int FLAGMANAGER::getFlag(string flag) {
 string FLAGMANAGER::getMap() {
     int flagIndex = getFlag("-m");
     if (flagIndex != -1) {
-        string chosenMap = string(argv[flagIndex + 1]);
-        if (chosenMap.find(".txt") == string::npos) {
-            chosenMap =  "/opt/cppathfinder/maps/" + chosenMap + ".txt";
+        if (!argv[flagIndex + 1]) {
+            throw runtime_error("You need to provide a map using -m argument!");
         };
+        string chosenMap = string(argv[flagIndex + 1]);
+
+        if (chosenMap.find(".txt") == string::npos) {
+            chosenMap =  "/usr/share/cppathfinder/maps/" + chosenMap + ".txt";
+        };
+
         return chosenMap;
     };
     throw runtime_error("You need to provide a map using -m argument!");
@@ -769,6 +775,27 @@ bool FLAGMANAGER::isVisualizer(ALGOS& algos) {
 
 
 
+void FLAGMANAGER::getHelp() {
+
+    if (getFlag("--help") != -1 || getFlag("-h") != -1 || argc == 1) {
+        
+        cout << "Usage: cppathfinder -m [mapname] [options]\n\n"
+         << "Options:\n"
+         << "  --show-visited       Show visited nodes in the final map\n"
+         << "  --visualize [timer]  Visualize the algorithms in real-time. Optionally provide a timer in ms for visualization speed (default is 50ms).\n"
+         << "  --help               Show this help message\n\n"
+         << "Default maps can be called using 'mapX' where X is the map number (1-11) or provided with a relative/absolute path. Map files must be in .txt format." << endl;
+        
+         exit(0);
+    };
+
+    
+};
+
+
+
+
+
 
 
 
@@ -783,9 +810,20 @@ bool FLAGMANAGER::isVisualizer(ALGOS& algos) {
 int main(int argc, char* argv[]) {
 
     sf::Font font;
-    if (!font.loadFromFile("arial.ttf")) {
-        throw runtime_error("No font found! You need to provide the 'arial.ttf' file alongside this executable!");
+    if (!font.loadFromFile("/usr/share/cppathfinder/arial.ttf")) {
+        if (!font.loadFromFile("arial.ttf")) {
+            throw runtime_error("No font found! You need to provide the 'arial.ttf' file alongside this executable!");
+        };
     };
+
+
+
+    FLAGMANAGER flagManager(argc, argv);
+
+
+    flagManager.getHelp();
+
+
 
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     sf::RenderWindow window(sf::VideoMode(desktop.width, desktop.height), "CPPathfinder");
@@ -797,7 +835,6 @@ int main(int argc, char* argv[]) {
 
     MAP workingMap;
     ALGOS algos;
-    FLAGMANAGER flagManager(argc, argv);
 
 
     workingMap.initMap(flagManager.getMap());
