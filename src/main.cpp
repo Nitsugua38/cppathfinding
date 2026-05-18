@@ -851,7 +851,12 @@ int main(int argc, char* argv[]) {
 #else
     sf::RenderWindow window(sf::VideoMode(desktop.width, desktop.height), "CPPathfinder");
 #endif
+#if SFML_VERSION_MAJOR >= 3
     sf::Text label(font);
+#else
+    sf::Text label;
+    label.setFont(font);
+#endif
     label.setCharacterSize(16);
     label.setFillColor(sf::Color::White);
 
@@ -944,7 +949,12 @@ int main(int argc, char* argv[]) {
 
         // Show benchmark text
 
+#if SFML_VERSION_MAJOR >= 3
         sf::Text benchmarkTxt(font);
+#else
+        sf::Text benchmarkTxt;
+        benchmarkTxt.setFont(font);
+#endif
         benchmarkTxt.setCharacterSize(14);
         benchmarkTxt.setFillColor(sf::Color::White);
         benchmarkTxt.setLineSpacing(1.3f);
