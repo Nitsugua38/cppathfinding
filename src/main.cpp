@@ -5,9 +5,29 @@
 #include <thread>
 #include <queue>
 #include <limits>
+#include <algorithm>
+#include <cmath>
 #include <SFML/Graphics.hpp>
+#include <SFML/Config.hpp>
 
 using namespace std;
+
+void handleEvents(sf::RenderWindow& window) {
+#if SFML_VERSION_MAJOR >= 3
+    while (const auto event = window.pollEvent()) {
+        if (event->is<sf::Event::Closed>()) {
+            window.close();
+        }
+    }
+#else
+    sf::Event event;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            window.close();
+        }
+    }
+#endif
+}
 
 
 
@@ -162,17 +182,17 @@ void MAP::printMap(sf::RenderWindow& window, float offsetX, float offsetY, float
 
             if (visual && visitedMatrix[y][x] && mapMatrix[y][x] != '.') cellToPrint.setFillColor(sf::Color(255, 255, 0));
 
-            cellToPrint.setPosition(offsetX + (x * cellsize), offsetY + (y * cellsize));
+            cellToPrint.setPosition({offsetX + (x * cellsize), offsetY + (y * cellsize)});
             window.draw(cellToPrint);
         };
         cout << endl;
     };
 
     label.setString(labelTxt);
-    if (labelTxt == "Depth-First Search") label.setPosition(0, 0);
-    if (labelTxt == "Breadth-First Search") label.setPosition(WIDTH + 100, 0);
-    if (labelTxt == "Dijkstra") label.setPosition(0, HEIGHT + 5);
-    if (labelTxt == "A*") label.setPosition(WIDTH + 100, HEIGHT + 5);
+    if (labelTxt == "Depth-First Search") label.setPosition({0.f, 0.f});
+    if (labelTxt == "Breadth-First Search") label.setPosition({WIDTH + 100.f, 0.f});
+    if (labelTxt == "Dijkstra") label.setPosition({0.f, HEIGHT + 5.f});
+    if (labelTxt == "A*") label.setPosition({WIDTH + 100.f, HEIGHT + 5.f});
 
     window.draw(label);
 
@@ -221,8 +241,7 @@ bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bo
 
         m.printMap(window, 0, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Depth-First Search", visual);
         window.display();
-        sf::Event event;
-        while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+        handleEvents(window);
     };
 
 
@@ -235,8 +254,7 @@ bool ALGOS::dfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bo
         if (visual) {
             m.printMap(window, 0, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Depth-First Search", visual);
             window.display();
-            sf::Event event;
-            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+            handleEvents(window);
         };
         return true;
     }
@@ -288,8 +306,7 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bo
 
             m.printMap(window, window.getSize().x / 2.0f - 50 + 100, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Breadth-First Search", visual);
             window.display();
-            sf::Event event;
-            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+            handleEvents(window);
         };
 
 
@@ -329,8 +346,7 @@ void ALGOS::bfs(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, bo
                     if (visual) {
                         m.printMap(window, window.getSize().x / 2.0f - 50 + 100, 20, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Breadth-First Search", visual);
                         window.display();
-                        sf::Event event;
-                        while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+                        handleEvents(window);
                     }
 
                     return;
@@ -412,8 +428,7 @@ void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& windo
 
             m.printMap(window, 0, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Dijkstra", visual);
             window.display();
-            sf::Event event;
-            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+            handleEvents(window);
         };
 
 
@@ -440,8 +455,7 @@ void ALGOS::dijkstra(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& windo
             if (visual) {
                 m.printMap(window, 0, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "Dijkstra", visual);
                 window.display();
-                sf::Event event;
-                while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+                handleEvents(window);
             }
 
 
@@ -560,8 +574,7 @@ void ALGOS::astar(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, 
 
             m.printMap(window, window.getSize().x / 2.0f - 50 + 100, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "A*", visual);
             window.display();
-            sf::Event event;
-            while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+            handleEvents(window);
         };
 
 
@@ -589,8 +602,7 @@ void ALGOS::astar(MAP& m, int CurrentX, int CurrentY, sf::RenderWindow& window, 
             if (visual) {
                 m.printMap(window, window.getSize().x / 2.0f - 50 + 100, window.getSize().y / 2.0f - 50 + 30, window.getSize().x / 2.0f - 50, window.getSize().y / 2.0f - 50, label, "A*", visual);
                 window.display();
-                sf::Event event;
-                while (window.pollEvent(event)) { if (event.type == sf::Event::Closed) window.close(); }
+                handleEvents(window);
             }
 
 
@@ -810,11 +822,19 @@ void FLAGMANAGER::getHelp() {
 int main(int argc, char* argv[]) {
 
     sf::Font font;
+#if SFML_VERSION_MAJOR >= 3
+    if (!font.openFromFile("/usr/share/cppathfinder/arial.ttf")) {
+        if (!font.openFromFile("arial.ttf")) {
+            throw runtime_error("No font found! You need to provide the 'arial.ttf' file alongside this executable!");
+        }
+    }
+#else
     if (!font.loadFromFile("/usr/share/cppathfinder/arial.ttf")) {
         if (!font.loadFromFile("arial.ttf")) {
             throw runtime_error("No font found! You need to provide the 'arial.ttf' file alongside this executable!");
-        };
-    };
+        }
+    }
+#endif
 
 
 
@@ -826,9 +846,12 @@ int main(int argc, char* argv[]) {
 
 
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+#if SFML_VERSION_MAJOR >= 3
+    sf::RenderWindow window(sf::VideoMode({desktop.size.x, desktop.size.y}), "CPPathfinder");
+#else
     sf::RenderWindow window(sf::VideoMode(desktop.width, desktop.height), "CPPathfinder");
-    sf::Text label;
-    label.setFont(font);
+#endif
+    sf::Text label(font);
     label.setCharacterSize(16);
     label.setFillColor(sf::Color::White);
 
@@ -903,10 +926,7 @@ int main(int argc, char* argv[]) {
 
     
     while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
-        };
+        handleEvents(window);
 
         window.clear(sf::Color::Black);
 
@@ -924,11 +944,10 @@ int main(int argc, char* argv[]) {
 
         // Show benchmark text
 
-        sf::Text benchmarkTxt;
-        benchmarkTxt.setFont(font);
+        sf::Text benchmarkTxt(font);
         benchmarkTxt.setCharacterSize(14);
         benchmarkTxt.setFillColor(sf::Color::White);
-        benchmarkTxt.setLineSpacing(1.3);
+        benchmarkTxt.setLineSpacing(1.3f);
 
         string benchmarkStr = 
             "DFS Path length is " + to_string(DFSbenchmark.pathLength(DFSworkingMap)) + " and took " + to_string(DFStime) + " ms to run.\n"
@@ -939,7 +958,7 @@ int main(int argc, char* argv[]) {
         if (visual) benchmarkStr = "Benchmark is not available in visualizer mode.";
 
         benchmarkTxt.setString(benchmarkStr);
-        benchmarkTxt.setPosition(20, window.getSize().y - 90);
+        benchmarkTxt.setPosition({20.f, static_cast<float>(window.getSize().y) - 90.f});
         window.draw(benchmarkTxt);
 
 
