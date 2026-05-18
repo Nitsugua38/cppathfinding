@@ -1,0 +1,12 @@
+Source: cppathfinder
+Section: education
+Priority: optional
+Maintainer: nitsu.xyz <contact@nitsu.xyz>
+Build-Depends: debhelper-compat (= 13), build-essential, libsfml-dev
+Standards-Version: 4.6.2
+
+Package: cppathfinder
+Architecture: any
+Description: Pathfinding visualizer for 2D grid-based maps.
+Homepage: https://nitsu.xyz
+Depends: ${shlibs:Depends}, ${misc:Depends}
